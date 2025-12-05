@@ -8,6 +8,7 @@ FROM oven/bun:1-debian AS base
 # Install system dependencies for Remotion/Chromium
 RUN apt-get update && apt-get install -y \
     chromium \
+    curl \
     ffmpeg \
     fonts-liberation \
     fonts-noto-color-emoji \
@@ -30,9 +31,6 @@ RUN apt-get update && apt-get install -y \
 # Set Chromium path for Remotion
 ENV CHROMIUM_PATH=/usr/bin/chromium
 
-# Install pnpm
-RUN npm install -g pnpm@9
-
 WORKDIR /app
 
 # ============================================================================
@@ -48,7 +46,7 @@ COPY packages/remotion/package.json ./packages/remotion/
 COPY packages/server/package.json ./packages/server/
 
 # Install all dependencies
-RUN pnpm install --frozen-lockfile
+RUN bun install
 
 # ============================================================================
 # Stage 3: Build stage (copy source)

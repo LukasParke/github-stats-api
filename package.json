@@ -29,5 +29,8 @@
   "devDependencies": {
     "concurrently": "^9.1.0",
     "typescript": "5.8.2"
-  }
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }
