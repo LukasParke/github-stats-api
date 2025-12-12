@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { redis } from '../services/queue';
-import { minioClient } from '../services/storage';
+import { minioClient, ensureBucket } from '../services/storage';
 import { env } from '../config/env';
 
 export const healthRoutes = new Hono();
@@ -27,9 +27,9 @@ healthRoutes.get('/ready', async (c) => {
     checks.redis = false;
   }
 
-  // Check MinIO
+  // Check MinIO - ensure bucket exists (will create if missing)
   try {
-    await minioClient.bucketExists(env.MINIO_BUCKET);
+    await ensureBucket();
     checks.minio = true;
   } catch {
     checks.minio = false;
