@@ -38,8 +38,8 @@ WORKDIR /app
 # ============================================================================
 FROM base AS deps
 
-# Copy workspace config
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+# Copy workspace config and lockfiles for reproducible installs
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml bun.lock ./
 
 # Copy package.json files for all packages
 COPY packages/remotion/package.json ./packages/remotion/
@@ -78,14 +78,15 @@ RUN mkdir -p /app/packages/server/temp && chmod 777 /app/packages/server/temp
 
 # Set environment
 ENV NODE_ENV=production
+# PORT defaults to 3000 but can be overridden at runtime
 ENV PORT=3000
 
-# Expose port
+# Expose port (can be overridden via PORT env var at runtime)
 EXPOSE 3000
 
-# Health check
+# Health check uses /health/ready endpoint and respects PORT env var
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+    CMD sh -c "curl -f http://localhost:${PORT:-3000}/health/ready || exit 1"
 
 # Default command: run the API server
 CMD ["bun", "run", "packages/server/src/index.ts"]

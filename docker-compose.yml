@@ -10,7 +10,7 @@ services:
       context: .
       dockerfile: packages/server/Dockerfile
     ports:
-      - "${PORT:-3029}:3029"
+      - "${PORT:-3029}:${PORT:-3029}"
     environment:
       - NODE_ENV=production
       - PORT=${PORT:-3029}
@@ -25,12 +25,12 @@ services:
       - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - RENDER_CONCURRENCY=${RENDER_CONCURRENCY:-2}
-      - PUBLIC_URL=${PUBLIC_URL:-http://minio:9000}
+      - PUBLIC_URL=${PUBLIC_URL}
     depends_on:
       redis:
         condition: service_healthy
       minio:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     networks:
       - github-stats
@@ -59,7 +59,7 @@ services:
       redis:
         condition: service_healthy
       minio:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     networks:
       - github-stats
@@ -95,11 +95,7 @@ services:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
     command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # Note: No healthcheck needed - MinIO starts reliably and API ensures bucket exists
     restart: unless-stopped
     networks:
       - github-stats

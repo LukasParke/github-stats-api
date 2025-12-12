@@ -8,6 +8,7 @@ import { apiRoutes } from './routes/api';
 import { webhookRoutes } from './routes/webhooks';
 import { healthRoutes } from './routes/health';
 import { redis, closeQueue } from './services/queue';
+import { ensureBucket } from './services/storage';
 
 const app = new OpenAPIHono();
 
@@ -134,10 +135,35 @@ redis.on('connect', () => {
   console.log('Redis connected');
 });
 
+// Initialize services on startup
+async function initialize(): Promise<void> {
+  console.log('Initializing API services...');
+
+  // Ensure MinIO bucket exists (with retries for startup timing)
+  try {
+    await ensureBucket();
+    console.log('✓ MinIO bucket ready');
+  } catch (error) {
+    console.error('⚠️  Failed to ensure MinIO bucket (will retry on readiness check):', error);
+    // Don't fail startup - readiness check will catch persistent issues
+  }
+
+  console.log('API initialization complete');
+}
+
 // Start server
 const port = env.PORT;
-console.log(`🚀 Server starting on port ${port}`);
-console.log(`📚 API docs available at http://localhost:${port}/api/docs`);
+
+// Initialize and start
+initialize()
+  .then(() => {
+    console.log(`🚀 Server starting on port ${port}`);
+    console.log(`📚 API docs available at http://localhost:${port}/api/docs`);
+  })
+  .catch((error) => {
+    console.error('Failed to initialize API:', error);
+    process.exit(1);
+  });
 
 export default {
   port,

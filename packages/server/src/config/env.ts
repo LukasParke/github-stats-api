@@ -27,8 +27,24 @@ export const env = createEnv({
     RENDER_CONCURRENCY: z.coerce.number().default(2),
     RENDER_TIMEOUT_MS: z.coerce.number().default(60000),
 
-    // Public URL for serving images
-    PUBLIC_URL: z.string().url().optional(),
+    // Public URL for serving images (required in production)
+    PUBLIC_URL: z
+      .string()
+      .url()
+      .optional()
+      .refine(
+        (val) => {
+          // In production, PUBLIC_URL must be set to an external URL
+          const nodeEnv = process.env.NODE_ENV;
+          if (nodeEnv === 'production') {
+            return val !== undefined && val.length > 0;
+          }
+          return true; // Optional in development
+        },
+        {
+          message: 'PUBLIC_URL is required in production and must be an external URL (e.g., https://storage.example.com)',
+        }
+      ),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

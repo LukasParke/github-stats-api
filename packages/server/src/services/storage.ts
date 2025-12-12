@@ -122,8 +122,16 @@ export async function getPresignedUrl(key: string, expirySeconds = 3600): Promis
  * Get the public URL for an image
  */
 export function getPublicUrl(key: string): string {
-  const baseUrl = env.PUBLIC_URL || `http://${env.MINIO_ENDPOINT}:${env.MINIO_PORT}`;
-  return `${baseUrl}/${BUCKET}/${key}`;
+  if (!env.PUBLIC_URL) {
+    if (env.NODE_ENV === 'production') {
+      throw new Error(
+        'PUBLIC_URL must be set in production to an external URL (e.g., https://storage.example.com)'
+      );
+    }
+    // Development fallback (internal URL - not accessible externally)
+    return `http://${env.MINIO_ENDPOINT}:${env.MINIO_PORT}/${BUCKET}/${key}`;
+  }
+  return `${env.PUBLIC_URL}/${BUCKET}/${key}`;
 }
 
 /**
