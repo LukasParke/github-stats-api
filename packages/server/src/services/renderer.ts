@@ -1,5 +1,6 @@
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
+import { enableTailwind } from "@remotion/tailwind-v4";
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { readFile } from "fs/promises";
 import { join, dirname } from "path";
@@ -84,6 +85,8 @@ async function getBundlePath(): Promise<string> {
         console.log(`Bundle progress: ${progress}%`);
       }
     },
+    // Match Remotion Studio's webpack config so rendering output matches local previews.
+    webpackOverride: enableTailwind,
   });
 
   console.log(`Bundle complete in ${Date.now() - startTime}ms`);

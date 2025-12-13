@@ -49,6 +49,12 @@ export function StreakRing({
 		extrapolateLeft: 'clamp',
 	});
 
+	// Keep the ring glow subtle so it doesn't bleed into adjacent content.
+	const glow =
+		theme === 'dark'
+			? 'drop-shadow(0 0 4px rgba(88, 166, 255, 0.35))'
+			: 'drop-shadow(0 0 3px rgba(9, 105, 218, 0.22))';
+
 	return (
 		<div
 			style={{
@@ -58,73 +64,72 @@ export function StreakRing({
 				gap: 8,
 				opacity,
 				transform: `scale(${scale})`,
+				position: 'relative',
 			}}
 		>
-			<svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-				{/* Background ring */}
-				<circle
-					cx={center}
-					cy={center}
-					r={radius}
-					fill="none"
-					stroke={theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}
-					strokeWidth={strokeWidth}
-				/>
-				{/* Progress ring */}
-				<circle
-					cx={center}
-					cy={center}
-					r={radius}
-					fill="none"
-					stroke={themeColors.accent}
-					strokeWidth={strokeWidth}
-					strokeLinecap="round"
-					strokeDasharray={circumference}
-					strokeDashoffset={strokeDashoffset}
+			{/* Ring + center content are clipped to this box */}
+			<div style={{ width: size, height: size, position: 'relative' }}>
+				<svg
+					width={size}
+					height={size}
+					style={{ transform: 'rotate(-90deg)', display: 'block' }}
+				>
+					{/* Background ring */}
+					<circle
+						cx={center}
+						cy={center}
+						r={radius}
+						fill="none"
+						stroke={theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}
+						strokeWidth={strokeWidth}
+					/>
+					{/* Progress ring */}
+					<circle
+						cx={center}
+						cy={center}
+						r={radius}
+						fill="none"
+						stroke={themeColors.accent}
+						strokeWidth={strokeWidth}
+						strokeLinecap="round"
+						strokeDasharray={circumference}
+						strokeDashoffset={strokeDashoffset}
+						style={{ filter: glow }}
+					/>
+				</svg>
+
+				{/* Center content */}
+				<div
 					style={{
-						filter: 'drop-shadow(0 0 8px rgba(88, 166, 255, 0.5))',
-					}}
-				/>
-				{/* Gradient definition */}
-				<defs>
-					<linearGradient id="streakGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-						<stop offset="0%" stopColor="#FFD700" />
-						<stop offset="100%" stopColor="#FFA500" />
-					</linearGradient>
-				</defs>
-			</svg>
-			
-			{/* Center content */}
-			<div
-				style={{
-					position: 'absolute',
-					display: 'flex',
-					flexDirection: 'column',
-					alignItems: 'center',
-					justifyContent: 'center',
-					width: size,
-					height: size,
-				}}
-			>
-				<span
-					style={{
-						fontSize: 28,
-						fontWeight: 700,
-						color: themeColors.text,
+						position: 'absolute',
+						inset: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						pointerEvents: 'none',
 					}}
 				>
-					<AnimatedCounter value={currentStreak} duration={2} startFrame={15} />
-				</span>
-				<span
-					style={{
-						fontSize: 10,
-						color: themeColors.textMuted,
-						textTransform: 'uppercase',
-						letterSpacing: '0.5px',
-					}}
-				>
-					Day Streak
-				</span>
+					<span
+						style={{
+							fontSize: 28,
+							fontWeight: 700,
+							color: themeColors.text,
+						}}
+					>
+						<AnimatedCounter value={currentStreak} duration={2} startFrame={15} />
+					</span>
+					<span
+						style={{
+							fontSize: 10,
+							color: themeColors.textMuted,
+							textTransform: 'uppercase',
+							letterSpacing: '0.5px',
+						}}
+					>
+						Day Streak
+					</span>
+				</div>
 			</div>
 		</div>
 	);

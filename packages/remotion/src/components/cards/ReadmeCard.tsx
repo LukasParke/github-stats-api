@@ -1,4 +1,4 @@
-import { motionValue, useTransform } from 'framer-motion';
+import { MotionConfig, motionValue, useTransform } from 'framer-motion';
 import { AbsoluteFill, Img, useCurrentFrame } from 'remotion';
 import { Theme, themes, UserStats } from '../../config';
 import { interpolateFactory } from '../../lib/utils';
@@ -124,17 +124,20 @@ export function ReadmeCard({
 								pointerEvents: 'none',
 							}}
 						>
-							<GeminiEffect
-								pathLengths={[
-									pathLengthFirst,
-									pathLengthSecond,
-									pathLengthThird,
-									pathLengthFourth,
-									pathLengthFifth,
-								]}
-								theme={theme}
-								opacity={theme === 'dark' ? 0.5 : 0.35}
-							/>
+							{/* Ensure Framer Motion animations run in headless renders (avoid reduced-motion behavior). */}
+							<MotionConfig reducedMotion="never">
+								<GeminiEffect
+									pathLengths={[
+										pathLengthFirst,
+										pathLengthSecond,
+										pathLengthThird,
+										pathLengthFourth,
+										pathLengthFifth,
+									]}
+									theme={theme}
+									opacity={theme === 'dark' ? 0.5 : 0.35}
+								/>
+							</MotionConfig>
 						</div>
 					) : (
 						<WaveBackground theme={theme} />

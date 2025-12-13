@@ -69,14 +69,14 @@ const compositions: Array<{
 		id: 'commit-streak-dark',
 		component: CommitStreakCard,
 		width: 450,
-		height: 200,
+		height: 230,
 		theme: 'dark',
 	},
 	{
 		id: 'commit-streak-light',
 		component: CommitStreakCard,
 		width: 450,
-		height: 200,
+		height: 230,
 		theme: 'light',
 	},
 
@@ -87,14 +87,14 @@ const compositions: Array<{
 		id: 'top-languages-dark',
 		component: TopLanguagesCard,
 		width: 450,
-		height: 280,
+		height: 310,
 		theme: 'dark',
 	},
 	{
 		id: 'top-languages-light',
 		component: TopLanguagesCard,
 		width: 450,
-		height: 280,
+		height: 310,
 		theme: 'light',
 	},
 

@@ -22,6 +22,7 @@
     "@octokit/webhooks": "^13.4.2",
     "@remotion/bundler": "4.0.382",
     "@remotion/renderer": "4.0.382",
+    "@remotion/tailwind-v4": "4.0.382",
     "@scalar/hono-api-reference": "^0.5.170",
     "@t3-oss/env-core": "^0.11.1",
     "bullmq": "^5.34.8",
