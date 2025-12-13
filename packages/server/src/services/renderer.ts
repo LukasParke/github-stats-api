@@ -1,12 +1,12 @@
-import { bundle } from '@remotion/bundler';
-import { renderMedia, selectComposition } from '@remotion/renderer';
-import { existsSync, mkdirSync, rmSync } from 'fs';
-import { readFile } from 'fs/promises';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { env } from '../config/env';
-import { uploadImage, getImageKey, getPublicUrl } from './storage';
-import type { UserStats } from './github';
+import { bundle } from "@remotion/bundler";
+import { renderMedia, selectComposition } from "@remotion/renderer";
+import { existsSync, mkdirSync, rmSync } from "fs";
+import { readFile } from "fs/promises";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import { env } from "../config/env";
+import { uploadImage, getImageKey, getPublicUrl } from "./storage";
+import type { UserStats } from "./github";
 
 // Get current directory
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -14,31 +14,31 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Path to the Remotion package
 // In the container image the monorepo lives at /app and packages are under /app/packages/*
 // This file is at /app/packages/server/src/services, so ../../../remotion resolves to /app/packages/remotion
-const REMOTION_PKG = join(__dirname, '../../../remotion');
-const REMOTION_ENTRY = join(REMOTION_PKG, 'src/index.ts');
-const TEMP_DIR = join(__dirname, '../../temp');
+const REMOTION_PKG = join(__dirname, "../../../remotion");
+const REMOTION_ENTRY = join(REMOTION_PKG, "src/index.ts");
+const TEMP_DIR = join(__dirname, "../../temp");
 
 // Cached bundle path
 let bundlePath: string | null = null;
 
 // Available compositions
 export const COMPOSITIONS = [
-  'readme-dark-gemini',
-  'readme-light-gemini',
-  'readme-dark-waves',
-  'readme-light-waves',
-  'commit-streak-dark',
-  'commit-streak-light',
-  'top-languages-dark',
-  'top-languages-light',
-  'contribution-dark',
-  'contribution-light',
-  'commit-graph-dark-wave',
-  'commit-graph-light-wave',
-  'commit-graph-dark-rain',
-  'commit-graph-light-rain',
-  'commit-graph-dark-cascade',
-  'commit-graph-light-cascade',
+  "readme-dark-gemini",
+  "readme-light-gemini",
+  "readme-dark-waves",
+  "readme-light-waves",
+  "commit-streak-dark",
+  "commit-streak-light",
+  "top-languages-dark",
+  "top-languages-light",
+  "contribution-dark",
+  "contribution-light",
+  "commit-graph-dark-wave",
+  "commit-graph-light-wave",
+  "commit-graph-dark-rain",
+  "commit-graph-light-rain",
+  "commit-graph-dark-cascade",
+  "commit-graph-light-cascade",
 ] as const;
 
 export type CompositionId = (typeof COMPOSITIONS)[number];
@@ -74,7 +74,7 @@ async function getBundlePath(): Promise<string> {
     return bundlePath;
   }
 
-  console.log('Bundling Remotion project...');
+  console.log("Bundling Remotion project...");
   const startTime = Date.now();
 
   bundlePath = await bundle({
@@ -93,19 +93,27 @@ async function getBundlePath(): Promise<string> {
 /**
  * Render a composition to GIF
  */
-export async function renderComposition(options: RenderOptions): Promise<RenderResult> {
+export async function renderComposition(
+  options: RenderOptions
+): Promise<RenderResult> {
   const startTime = Date.now();
   const { compositionId, userStats, username } = options;
 
   ensureTempDir();
 
-  const outputPath = join(TEMP_DIR, `${username}-${compositionId}-${Date.now()}.gif`);
+  const outputPath = join(
+    TEMP_DIR,
+    `${username}-${compositionId}-${Date.now()}.gif`
+  );
 
   try {
     // Get or create bundle
+    console.log(`[render ${username}/${compositionId}] getBundlePath...`);
     const serveUrl = await getBundlePath();
+    console.log(`[render ${username}/${compositionId}] serveUrl ready`);
 
     // Select the composition
+    console.log(`[render ${username}/${compositionId}] selectComposition...`);
     const composition = await selectComposition({
       serveUrl,
       id: compositionId,
@@ -113,14 +121,20 @@ export async function renderComposition(options: RenderOptions): Promise<RenderR
         userStats,
       },
     });
+    console.log(
+      `[render ${username}/${compositionId}] composition selected: durationInFrames=${composition.durationInFrames} fps=${composition.fps}`
+    );
 
     console.log(`Rendering ${compositionId} for ${username}...`);
 
     // Render to GIF
+    console.log(
+      `[render ${username}/${compositionId}] renderMedia -> ${outputPath}`
+    );
     await renderMedia({
       composition,
       serveUrl,
-      codec: 'gif',
+      codec: "gif",
       outputLocation: outputPath,
       inputProps: {
         userStats,
@@ -132,19 +146,29 @@ export async function renderComposition(options: RenderOptions): Promise<RenderR
         }
       },
     });
+    console.log(`[render ${username}/${compositionId}] renderMedia done`);
 
     // Read the rendered file
+    console.log(`[render ${username}/${compositionId}] reading output file`);
     const gifBuffer = await readFile(outputPath);
+    console.log(
+      `[render ${username}/${compositionId}] read ${gifBuffer.length} bytes`
+    );
 
     // Upload to MinIO
     const imageKey = getImageKey(username, compositionId);
+    console.log(
+      `[render ${username}/${compositionId}] uploading to MinIO key=${imageKey}`
+    );
     await uploadImage(imageKey, gifBuffer, {
-      'x-amz-meta-username': username,
-      'x-amz-meta-composition': compositionId,
-      'x-amz-meta-rendered-at': new Date().toISOString(),
+      "x-amz-meta-username": username,
+      "x-amz-meta-composition": compositionId,
+      "x-amz-meta-rendered-at": new Date().toISOString(),
     });
+    console.log(`[render ${username}/${compositionId}] upload done`);
 
     const imageUrl = getPublicUrl(imageKey);
+    console.log(`[render ${username}/${compositionId}] imageUrl=${imageUrl}`);
 
     // Clean up temp file
     rmSync(outputPath, { force: true });
@@ -164,7 +188,8 @@ export async function renderComposition(options: RenderOptions): Promise<RenderR
       rmSync(outputPath, { force: true });
     }
 
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     console.error(`Render failed for ${compositionId}:`, errorMessage);
 
     return {
@@ -202,7 +227,7 @@ export async function renderAllCompositions(
 export async function renderCompositionsByTheme(
   username: string,
   userStats: UserStats,
-  theme: 'light' | 'dark'
+  theme: "light" | "dark"
 ): Promise<Map<CompositionId, RenderResult>> {
   const results = new Map<CompositionId, RenderResult>();
 
@@ -228,13 +253,13 @@ export function invalidateBundleCache(): void {
     rmSync(bundlePath, { recursive: true, force: true });
   }
   bundlePath = null;
-  console.log('Bundle cache invalidated');
+  console.log("Bundle cache invalidated");
 }
 
 /**
  * Pre-warm the bundle cache
  */
 export async function warmupBundle(): Promise<void> {
-  console.log('Pre-warming bundle cache...');
+  console.log("Pre-warming bundle cache...");
   await getBundlePath();
 }

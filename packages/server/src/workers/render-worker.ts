@@ -61,19 +61,28 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
     const { username, compositionId, installationId, triggeredBy } = job.data;
     const startTime = Date.now();
 
+    const prefix = `[job ${job.id}]`;
     console.log(
-      `Processing job ${job.id}: ${compositionId} for ${username} (triggered by ${triggeredBy})`
+      `${prefix} start: composition=${compositionId} username=${username} triggeredBy=${triggeredBy} installationId=${
+        installationId ?? "none"
+      }`
     );
+    console.log(`${prefix} data: ${JSON.stringify(job.data)}`);
 
     try {
       // Update progress
       await job.updateProgress(10);
+      console.log(`${prefix} progress=10 (starting)`);
 
       // Fetch fresh user stats
       let userStats;
       try {
+        const t0 = Date.now();
+        console.log(`${prefix} fetching GitHub stats...`);
         userStats = await fetchUserStats(installationId, username);
+        console.log(`${prefix} fetched GitHub stats in ${Date.now() - t0}ms`);
         await job.updateProgress(30);
+        console.log(`${prefix} progress=30 (stats fetched)`);
       } catch (error) {
         console.error(`Failed to fetch stats for ${username}:`, error);
         throw new Error(
@@ -85,6 +94,8 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
 
       // Render the composition
       await job.updateProgress(40);
+      console.log(`${prefix} progress=40 (render starting)`);
+      const renderStart = Date.now();
 
       const result = await renderComposition({
         compositionId: compositionId as CompositionId,
@@ -92,7 +103,13 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
         username,
       });
 
+      console.log(
+        `${prefix} render finished in ${Date.now() - renderStart}ms success=${
+          result.success
+        }`
+      );
       await job.updateProgress(90);
+      console.log(`${prefix} progress=90 (render done)`);
 
       if (!result.success) {
         throw new Error(result.error || "Render failed");
@@ -100,13 +117,20 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
 
       // Cache the image URL
       if (result.imageUrl) {
+        console.log(`${prefix} caching imageUrl=${result.imageUrl}`);
         await cache.setImageUrl(username, compositionId, result.imageUrl, 3600);
+        console.log(`${prefix} cached imageUrl`);
       }
 
       await job.updateProgress(100);
+      console.log(`${prefix} progress=100 (done)`);
 
       const durationMs = Date.now() - startTime;
-      console.log(`✓ Completed job ${job.id} in ${durationMs}ms`);
+      console.log(
+        `${prefix} completed in ${durationMs}ms imageKey=${
+          result.imageKey ?? "none"
+        } imageUrl=${result.imageUrl ?? "none"}`
+      );
 
       return {
         success: true,
@@ -118,7 +142,7 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error(`✗ Failed job ${job.id}:`, errorMessage);
+      console.error(`${prefix} failed: ${errorMessage}`);
 
       return {
         success: false,
