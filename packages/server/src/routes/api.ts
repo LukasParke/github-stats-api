@@ -4,13 +4,11 @@ import {
   addBulkRenderJobs,
   getJobStatus,
   getQueueStats,
-  cache,
 } from '../services/queue';
 import {
   imageExists,
   getImageStream,
   getImageStats,
-  getPublicUrl,
   getImageKey,
 } from '../services/storage';
 import { COMPOSITIONS, CompositionId } from '../services/renderer';
@@ -246,9 +244,6 @@ const getImageRoute = createRoute({
         },
       },
     },
-    302: {
-      description: 'Redirect to cached image URL',
-    },
     400: {
       description: 'Invalid composition',
       content: {
@@ -279,24 +274,12 @@ apiRoutes.openapi(getImageRoute, async (c) => {
   const compositionId = composition as CompositionId;
   const imageKey = getImageKey(username, compositionId);
 
-  // Check cache first (unless refresh requested)
-  if (!shouldRefresh) {
-    const cachedUrl = await cache.getImageUrl(username, compositionId);
-    if (cachedUrl) {
-      return c.redirect(cachedUrl, 302);
-    }
-  }
-
   // Check if image exists in storage
   const exists = await imageExists(imageKey);
 
   if (exists && !shouldRefresh) {
     const stats = await getImageStats(imageKey);
     const stream = await getImageStream(imageKey);
-
-    // Cache the URL
-    const publicUrl = getPublicUrl(imageKey);
-    await cache.setImageUrl(username, compositionId, publicUrl, 3600);
 
     return new Response(stream as unknown as ReadableStream, {
       headers: {

@@ -122,16 +122,20 @@ export async function getPresignedUrl(key: string, expirySeconds = 3600): Promis
  * Get the public URL for an image
  */
 export function getPublicUrl(key: string): string {
-  if (!env.PUBLIC_URL) {
-    if (env.NODE_ENV === 'production') {
-      throw new Error(
-        'PUBLIC_URL must be set in production to an external URL (e.g., https://storage.example.com)'
-      );
-    }
-    // Development fallback (internal URL - not accessible externally)
-    return `http://${env.MINIO_ENDPOINT}:${env.MINIO_PORT}/${BUCKET}/${key}`;
+  // We keep MinIO internal and serve images via the API image route.
+  // Key format is always: images/${username}/${compositionId}.gif
+  const parts = key.split('/');
+  const username = parts.length >= 3 ? parts[1] : undefined;
+  const filename = parts.length >= 3 ? parts[2] : undefined;
+  const compositionId = filename?.endsWith('.gif') ? filename.slice(0, -4) : undefined;
+
+  const base = env.PUBLIC_URL ? env.PUBLIC_URL.replace(/\/+$/, '') : '';
+
+  if (parts[0] === 'images' && username && compositionId) {
+    return `${base}/api/image/${encodeURIComponent(username)}/${encodeURIComponent(compositionId)}`;
   }
-  return `${env.PUBLIC_URL}/${BUCKET}/${key}`;
+
+  throw new Error(`Invalid image key format for public URL: ${key}`);
 }
 
 /**

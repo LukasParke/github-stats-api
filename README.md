@@ -126,6 +126,7 @@ The server provides:
 Deploy with Docker Compose or Dokploy:
 
 ```bash
+cp env.example .env
 docker compose up -d
 ```
 

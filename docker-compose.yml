@@ -4,6 +4,50 @@
 version: '3.8'
 
 services:
+  # Redis for job queue and caching
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - github-stats
+
+  # MinIO for internal object storage (S3-compatible)
+  # This service is internal-only; images are served publicly via the API.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    restart: unless-stopped
+    networks:
+      - github-stats
+
+  # Create default bucket on startup
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/github-stats --ignore-existing;
+      mc anonymous set public myminio/github-stats;
+      exit 0;
+      "
+    networks:
+      - github-stats
+
   # Main API server
   api:
     build:
@@ -14,18 +58,26 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=${PORT:-3029}
-      - REDIS_URL=${REDIS_URL:-redis://github-stats-redis:6379}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-github-stats-minio}
-      - MINIO_PORT=${MINIO_PORT:-9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_BUCKET=${MINIO_BUCKET:-github-stats}
-      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=github-stats
+      - MINIO_USE_SSL=false
       - GITHUB_APP_ID=${GITHUB_APP_ID}
       - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - RENDER_CONCURRENCY=${RENDER_CONCURRENCY:-2}
-      - PUBLIC_URL=${PUBLIC_URL}
+      # Optional: if set, used to generate absolute URLs (e.g. https://api.example.com)
+      - PUBLIC_URL=${PUBLIC_URL:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - github-stats
@@ -38,27 +90,36 @@ services:
     command: ["bun", "run", "packages/server/src/workers/render-worker.ts"]
     environment:
       - NODE_ENV=production
-      - REDIS_URL=${REDIS_URL:-redis://github-stats-redis:6379}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-github-stats-minio}
-      - MINIO_PORT=${MINIO_PORT:-9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_BUCKET=${MINIO_BUCKET:-github-stats}
-      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=github-stats
+      - MINIO_USE_SSL=false
       - GITHUB_APP_ID=${GITHUB_APP_ID}
       - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
       - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
       - RENDER_CONCURRENCY=${RENDER_CONCURRENCY:-2}
       - RENDER_TIMEOUT_MS=${RENDER_TIMEOUT_MS:-60000}
+      # Optional: if set, used to generate absolute URLs (e.g. https://api.example.com)
+      - PUBLIC_URL=${PUBLIC_URL:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - github-stats
-    deploy:
-      resources:
-        limits:
-          memory: 4G
 
 networks:
   github-stats:
     driver: bridge
+
+volumes:
+  redis-data:
+  minio-data:
 
