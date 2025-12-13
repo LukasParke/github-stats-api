@@ -99,6 +99,10 @@ export async function renderComposition(
   const startTime = Date.now();
   const { compositionId, userStats, username } = options;
 
+  // Render at higher pixel density so GIFs look crisp when displayed smaller (e.g. in GitHub README).
+  // This increases file size; tune down if needed.
+  const renderScale = 2;
+
   ensureTempDir();
 
   const outputPath = join(
@@ -135,6 +139,7 @@ export async function renderComposition(
       composition,
       serveUrl,
       codec: "gif",
+      scale: renderScale,
       outputLocation: outputPath,
       inputProps: {
         userStats,
