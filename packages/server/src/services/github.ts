@@ -129,6 +129,16 @@ export async function getInstallationOctokit(installationId: number): Promise<Oc
 }
 
 /**
+ * Lightweight check that GitHub is reachable and the App credentials are valid.
+ * Uses app-level authentication (JWT) and hits the public GitHub API.
+ */
+export async function checkGitHubAppAuth(): Promise<void> {
+  // This endpoint returns metadata about the authenticated GitHub App.
+  // If credentials are invalid, this will fail with 401/403.
+  await app.octokit.request('GET /app');
+}
+
+/**
  * Fetch user stats using the GitHub GraphQL API
  */
 export async function fetchUserStats(

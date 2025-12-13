@@ -46,9 +46,46 @@ export const env = createEnv({
         }
       ),
   },
-  runtimeEnv: process.env,
+  runtimeEnvStrict: {
+    PORT: process.env.PORT,
+    NODE_ENV: process.env.NODE_ENV,
+    GITHUB_APP_ID: process.env.GITHUB_APP_ID,
+    GITHUB_APP_PRIVATE_KEY: process.env.GITHUB_APP_PRIVATE_KEY,
+    GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,
+    REDIS_URL: process.env.REDIS_URL,
+    MINIO_ENDPOINT: process.env.MINIO_ENDPOINT,
+    MINIO_PORT: process.env.MINIO_PORT,
+    MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY,
+    MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY,
+    MINIO_BUCKET: process.env.MINIO_BUCKET,
+    MINIO_USE_SSL: process.env.MINIO_USE_SSL,
+    RENDER_CONCURRENCY: process.env.RENDER_CONCURRENCY,
+    RENDER_TIMEOUT_MS: process.env.RENDER_TIMEOUT_MS,
+    PUBLIC_URL: process.env.PUBLIC_URL,
+  },
   emptyStringAsUndefined: true,
+  onValidationError: (error) => {
+    console.error('❌ Environment validation failed:');
+    const issues = (error as { issues?: Array<{ path?: Array<string | number>; message: string }> }).issues;
+    if (Array.isArray(issues)) {
+      for (const issue of issues) {
+        const path = issue.path?.join('.') || 'unknown';
+        console.error(`  - ${path}: ${issue.message}`);
+      }
+    } else {
+      console.error(String(error));
+    }
+    process.exit(1);
+  },
 });
 
 export type Env = typeof env;
+
+/**
+ * Explicitly validate and return the parsed environment.
+ * (Validation happens during module initialization; this is for call-site clarity.)
+ */
+export function validateEnv(): Env {
+  return env;
+}
 

@@ -1,7 +1,5 @@
 import { Hono } from 'hono';
-import { redis } from '../services/queue';
-import { minioClient, ensureBucket } from '../services/storage';
-import { env } from '../config/env';
+import { checkGitHubAppReachable, checkMinioReachable, checkRedisReachable } from '../config/startup';
 
 export const healthRoutes = new Hono();
 
@@ -17,22 +15,31 @@ healthRoutes.get('/ready', async (c) => {
     server: true,
     redis: false,
     minio: false,
+    github: false,
   };
 
-  // Check Redis
+  // Check Redis (fast probe; don't block healthcheck for long)
   try {
-    const pong = await redis.ping();
-    checks.redis = pong === 'PONG';
+    await checkRedisReachable({ attempts: 1, timeoutMs: 1500, delayMs: 0 });
+    checks.redis = true;
   } catch {
     checks.redis = false;
   }
 
   // Check MinIO - ensure bucket exists (will create if missing)
   try {
-    await ensureBucket();
+    await checkMinioReachable({ attempts: 1, timeoutMs: 4000, delayMs: 0 });
     checks.minio = true;
   } catch {
     checks.minio = false;
+  }
+
+  // Check GitHub App auth (fast probe)
+  try {
+    await checkGitHubAppReachable({ attempts: 1, timeoutMs: 4000, delayMs: 0 });
+    checks.github = true;
+  } catch {
+    checks.github = false;
   }
 
   const allHealthy = Object.values(checks).every(Boolean);

@@ -1,52 +1,14 @@
 import { Worker, Job } from 'bullmq';
 import { redis, RENDER_QUEUE, RenderJobData, RenderJobResult, cache } from '../services/queue';
-import { renderComposition, CompositionId, warmupBundle } from '../services/renderer';
-import { ensureBucket } from '../services/storage';
+import { renderComposition, CompositionId } from '../services/renderer';
 import { fetchUserStats } from '../services/github';
 import { env } from '../config/env';
+import { logLoadedConfig, runStartupChecks } from '../config/startup';
+
+logLoadedConfig('worker');
+await runStartupChecks({ role: 'worker' });
 
 console.log('🚀 Starting render worker...');
-
-// Retry helper for service connections
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: { maxRetries?: number; delayMs?: number; name?: string } = {}
-): Promise<T> {
-  const { maxRetries = 10, delayMs = 3000, name = 'operation' } = options;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.log(`${name} attempt ${attempt}/${maxRetries} failed: ${errorMsg}`);
-      
-      if (attempt === maxRetries) {
-        throw error;
-      }
-      
-      console.log(`Retrying in ${delayMs}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-  
-  throw new Error(`${name} failed after ${maxRetries} attempts`);
-}
-
-// Pre-warm on startup
-async function initialize(): Promise<void> {
-  console.log('Initializing worker services...');
-
-  // Ensure MinIO bucket exists (with retries for startup timing)
-  await withRetry(() => ensureBucket(), { name: 'MinIO connection' });
-  console.log('✓ MinIO bucket ready');
-
-  // Pre-warm Remotion bundle
-  await warmupBundle();
-  console.log('✓ Remotion bundle warmed up');
-
-  console.log('Worker initialization complete');
-}
 
 // Process render jobs
 const worker = new Worker<RenderJobData, RenderJobResult>(
@@ -155,12 +117,6 @@ async function shutdown(): Promise<void> {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
-
-// Initialize and start
-initialize().catch((error) => {
-  console.error('Worker initialization failed:', error);
-  process.exit(1);
-});
 
 console.log(`Worker started with concurrency: ${env.RENDER_CONCURRENCY}`);
 
