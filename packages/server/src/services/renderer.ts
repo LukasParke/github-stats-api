@@ -12,7 +12,9 @@ import type { UserStats } from './github';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Path to the Remotion package
-const REMOTION_PKG = join(__dirname, '../../../../remotion');
+// In the container image the monorepo lives at /app and packages are under /app/packages/*
+// This file is at /app/packages/server/src/services, so ../../../remotion resolves to /app/packages/remotion
+const REMOTION_PKG = join(__dirname, '../../../remotion');
 const REMOTION_ENTRY = join(REMOTION_PKG, 'src/index.ts');
 const TEMP_DIR = join(__dirname, '../../temp');
 
