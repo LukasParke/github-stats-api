@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Optimized settings for smaller GIF file size
-export const FPS = 60;
+export const FPS = 50;
 export const DurationInSeconds = 8;
 export const DurationInFrames = FPS * DurationInSeconds;
 
