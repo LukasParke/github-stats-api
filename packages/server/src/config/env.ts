@@ -1,11 +1,13 @@
-import { createEnv } from '@t3-oss/env-core';
-import { z } from 'zod';
+import { createEnv } from "@t3-oss/env-core";
+import { z } from "zod";
 
 export const env = createEnv({
   server: {
     // Server
     PORT: z.coerce.number().default(3000),
-    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
 
     // GitHub App
     GITHUB_APP_ID: z.string().min(1),
@@ -13,15 +15,19 @@ export const env = createEnv({
     GITHUB_WEBHOOK_SECRET: z.string().min(1),
 
     // Redis
-    REDIS_URL: z.string().url().default('redis://localhost:6379'),
+    REDIS_URL: z.string().url().default("redis://localhost:6379"),
 
     // MinIO
-    MINIO_ENDPOINT: z.string().default('localhost'),
+    MINIO_ENDPOINT: z.string().default("localhost"),
     MINIO_PORT: z.coerce.number().default(9000),
     MINIO_ACCESS_KEY: z.string().min(1),
     MINIO_SECRET_KEY: z.string().min(1),
-    MINIO_BUCKET: z.string().default('github-stats'),
-    MINIO_USE_SSL: z.coerce.boolean().default(false),
+    MINIO_BUCKET: z.string().default("github-stats"),
+    // Accept only explicit string values from process.env to avoid truthiness bugs (e.g. "false" => true)
+    MINIO_USE_SSL: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
 
     // Rendering
     RENDER_CONCURRENCY: z.coerce.number().default(2),
@@ -36,13 +42,14 @@ export const env = createEnv({
         (val) => {
           // In production, PUBLIC_URL must be set to an external URL
           const nodeEnv = process.env.NODE_ENV;
-          if (nodeEnv === 'production') {
+          if (nodeEnv === "production") {
             return val !== undefined && val.length > 0;
           }
           return true; // Optional in development
         },
         {
-          message: 'PUBLIC_URL is required in production and must be an external URL (e.g., https://storage.example.com)',
+          message:
+            "PUBLIC_URL is required in production and must be an external URL (e.g., https://storage.example.com)",
         }
       ),
   },
@@ -65,11 +72,15 @@ export const env = createEnv({
   },
   emptyStringAsUndefined: true,
   onValidationError: (error) => {
-    console.error('❌ Environment validation failed:');
-    const issues = (error as { issues?: Array<{ path?: Array<string | number>; message: string }> }).issues;
+    console.error("❌ Environment validation failed:");
+    const issues = (
+      error as {
+        issues?: Array<{ path?: Array<string | number>; message: string }>;
+      }
+    ).issues;
     if (Array.isArray(issues)) {
       for (const issue of issues) {
-        const path = issue.path?.join('.') || 'unknown';
+        const path = issue.path?.join(".") || "unknown";
         console.error(`  - ${path}: ${issue.message}`);
       }
     } else {
@@ -88,4 +99,3 @@ export type Env = typeof env;
 export function validateEnv(): Env {
   return env;
 }
-
