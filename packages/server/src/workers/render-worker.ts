@@ -1,32 +1,58 @@
-import { Worker, Job } from 'bullmq';
-import { redis, RENDER_QUEUE, RenderJobData, RenderJobResult, cache, renderQueueEvents } from '../services/queue';
-import { renderComposition, CompositionId } from '../services/renderer';
-import { fetchUserStats } from '../services/github';
-import { env } from '../config/env';
-import { logLoadedConfig, runStartupChecks } from '../config/startup';
+import { Worker, Job } from "bullmq";
+import {
+  redis,
+  RENDER_QUEUE,
+  RenderJobData,
+  RenderJobResult,
+  cache,
+  renderQueueEvents,
+  renderQueue,
+} from "../services/queue";
+import { renderComposition, CompositionId } from "../services/renderer";
+import { fetchUserStats } from "../services/github";
+import { env } from "../config/env";
+import { logLoadedConfig, runStartupChecks } from "../config/startup";
 
-logLoadedConfig('worker');
-await runStartupChecks({ role: 'worker' });
+logLoadedConfig("worker");
+await runStartupChecks({ role: "worker" });
 
-console.log('🚀 Starting render worker...');
+console.log("🚀 Starting render worker...");
+
+// If the queue was paused previously, jobs can remain stuck (often showing as "prioritized").
+// This can persist across restarts because the paused flag lives in Redis.
+try {
+  const paused = await renderQueue.isPaused();
+  console.log(`Queue paused: ${paused}`);
+  if (paused) {
+    console.warn("Queue is paused. Resuming now...");
+    await renderQueue.resume();
+    console.log("Queue resumed");
+  }
+} catch (error) {
+  console.error("Failed to check/resume queue paused state:", error);
+}
 
 // Process-level crash visibility
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled promise rejection in worker:', reason);
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection in worker:", reason);
 });
 
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught exception in worker:', error);
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception in worker:", error);
   process.exit(1);
 });
 
 // Redis connection visibility (the API already logs these; worker should too)
-redis.on('connect', () => console.log('Redis connected (worker)'));
-redis.on('ready', () => console.log('Redis ready (worker)'));
-redis.on('reconnecting', (delay: number) => console.warn(`Redis reconnecting (worker) in ${delay}ms`));
-redis.on('close', () => console.warn('Redis connection closed (worker)'));
-redis.on('end', () => console.warn('Redis connection ended (worker)'));
-redis.on('error', (error) => console.error('Redis connection error (worker):', error));
+redis.on("connect", () => console.log("Redis connected (worker)"));
+redis.on("ready", () => console.log("Redis ready (worker)"));
+redis.on("reconnecting", (delay: number) =>
+  console.warn(`Redis reconnecting (worker) in ${delay}ms`)
+);
+redis.on("close", () => console.warn("Redis connection closed (worker)"));
+redis.on("end", () => console.warn("Redis connection ended (worker)"));
+redis.on("error", (error) =>
+  console.error("Redis connection error (worker):", error)
+);
 
 // Process render jobs
 const worker = new Worker<RenderJobData, RenderJobResult>(
@@ -35,7 +61,9 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
     const { username, compositionId, installationId, triggeredBy } = job.data;
     const startTime = Date.now();
 
-    console.log(`Processing job ${job.id}: ${compositionId} for ${username} (triggered by ${triggeredBy})`);
+    console.log(
+      `Processing job ${job.id}: ${compositionId} for ${username} (triggered by ${triggeredBy})`
+    );
 
     try {
       // Update progress
@@ -48,7 +76,11 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
         await job.updateProgress(30);
       } catch (error) {
         console.error(`Failed to fetch stats for ${username}:`, error);
-        throw new Error(`Failed to fetch user stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new Error(
+          `Failed to fetch user stats: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
 
       // Render the composition
@@ -63,7 +95,7 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
       await job.updateProgress(90);
 
       if (!result.success) {
-        throw new Error(result.error || 'Render failed');
+        throw new Error(result.error || "Render failed");
       }
 
       // Cache the image URL
@@ -84,7 +116,8 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
         durationMs,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       console.error(`✗ Failed job ${job.id}:`, errorMessage);
 
       return {
@@ -106,72 +139,76 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
 );
 
 // Worker event handlers
-worker.on('ready', () => {
-  console.log(`Worker ready. Queue=${RENDER_QUEUE}, concurrency=${env.RENDER_CONCURRENCY}`);
+worker.on("ready", () => {
+  console.log(
+    `Worker ready. Queue=${RENDER_QUEUE}, concurrency=${env.RENDER_CONCURRENCY}`
+  );
 });
 
-worker.on('active', (job) => {
+worker.on("active", (job) => {
   console.log(`Job ${job.id} active: ${job.name}`);
 });
 
-worker.on('progress', (job, progress) => {
+worker.on("progress", (job, progress) => {
   console.log(`Job ${job.id} progress: ${progress}`);
 });
 
-worker.on('completed', (job, result) => {
-  console.log(`Job ${job.id} completed:`, result.success ? 'success' : 'failed');
+worker.on("completed", (job, result) => {
+  console.log(
+    `Job ${job.id} completed:`,
+    result.success ? "success" : "failed"
+  );
 });
 
-worker.on('failed', (job, error) => {
+worker.on("failed", (job, error) => {
   console.error(`Job ${job?.id} failed:`, error.message);
 });
 
-worker.on('error', (error) => {
-  console.error('Worker error:', error);
+worker.on("error", (error) => {
+  console.error("Worker error:", error);
 });
 
-worker.on('stalled', (jobId) => {
+worker.on("stalled", (jobId) => {
   console.warn(`Job ${jobId} stalled`);
 });
 
-worker.on('closed', () => {
-  console.log('Worker closed');
+worker.on("closed", () => {
+  console.log("Worker closed");
 });
 
 // Queue-level visibility (this helps even if worker never picks a job)
-renderQueueEvents.on('waiting', ({ jobId }) => {
+renderQueueEvents.on("waiting", ({ jobId }) => {
   console.log(`QueueEvent: job waiting: ${jobId}`);
 });
 
-renderQueueEvents.on('active', ({ jobId, prev }) => {
+renderQueueEvents.on("active", ({ jobId, prev }) => {
   console.log(`QueueEvent: job active: ${jobId} (prev=${prev})`);
 });
 
-renderQueueEvents.on('completed', ({ jobId }) => {
+renderQueueEvents.on("completed", ({ jobId }) => {
   console.log(`QueueEvent: job completed: ${jobId}`);
 });
 
-renderQueueEvents.on('failed', ({ jobId, failedReason }) => {
+renderQueueEvents.on("failed", ({ jobId, failedReason }) => {
   console.error(`QueueEvent: job failed: ${jobId}: ${failedReason}`);
 });
 
-renderQueueEvents.on('stalled', ({ jobId }) => {
+renderQueueEvents.on("stalled", ({ jobId }) => {
   console.warn(`QueueEvent: job stalled: ${jobId}`);
 });
 
 // Graceful shutdown
 async function shutdown(): Promise<void> {
-  console.log('Shutting down worker...');
+  console.log("Shutting down worker...");
 
   await worker.close();
   await redis.quit();
 
-  console.log('Worker shut down complete');
+  console.log("Worker shut down complete");
   process.exit(0);
 }
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 console.log(`Worker started with concurrency: ${env.RENDER_CONCURRENCY}`);
-
