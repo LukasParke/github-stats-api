@@ -58,8 +58,6 @@ services:
         limits:
           memory: 4G
 
-volumes:
-
 networks:
   github-stats:
     driver: bridge
