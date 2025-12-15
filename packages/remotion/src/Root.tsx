@@ -1,5 +1,5 @@
 import '@fontsource/inter/latin.css';
-import { CalculateMetadataFunction, Composition, getInputProps } from 'remotion';
+import { AbsoluteFill, CalculateMetadataFunction, Composition, getInputProps, getRemotionEnvironment } from 'remotion';
 import './styles/global.css';
 
 import { getUserStats } from './data/fetchers';
@@ -174,6 +174,9 @@ const compositions: Array<{
 ];
 
 export const RemotionRoot = () => {
+	const env = getRemotionEnvironment();
+	const showPreviewBackground = !env.isRendering;
+
 	const calculateMetadata: CalculateMetadataFunction<MainProps> = async ({
 		props,
 		abortSignal,
@@ -218,13 +221,25 @@ export const RemotionRoot = () => {
 					key={id}
 					id={id}
 					component={(props: MainProps) => (
-						<Component
-							userStats={props.userStats}
-							theme={theme}
-							{...(backgroundEffect && { backgroundEffect })}
-							{...(animationStyle && { animationStyle })}
-							{...(includeMusic && { musicData: defaultMusicData })}
-						/>
+						<AbsoluteFill
+							style={{
+								// Studio/preview: show GitHub-like page background so light/dark previews are accurate.
+								// Rendering (server/CLI): keep transparent so output can be embedded on any background.
+								backgroundColor: showPreviewBackground
+									? theme === 'dark'
+										? '#0d1117'
+										: '#ffffff'
+									: 'transparent',
+							}}
+						>
+							<Component
+								userStats={props.userStats}
+								theme={theme}
+								{...(backgroundEffect && { backgroundEffect })}
+								{...(animationStyle && { animationStyle })}
+								{...(includeMusic && { musicData: defaultMusicData })}
+							/>
+						</AbsoluteFill>
 					)}
 					durationInFrames={DurationInFrames}
 					fps={FPS}

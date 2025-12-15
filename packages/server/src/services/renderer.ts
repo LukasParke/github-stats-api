@@ -1,6 +1,5 @@
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import { enableTailwind } from "@remotion/tailwind-v4";
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { readFile } from "fs/promises";
 import { join, dirname } from "path";
@@ -8,6 +7,8 @@ import { fileURLToPath } from "url";
 import { env } from "../config/env";
 import { uploadImage, getImageKey, getPublicUrl } from "./storage";
 import type { UserStats } from "./github";
+import { webpackOverride } from "../../../remotion/src/webpack-override";
+import { getSharedRemotionBrowser } from "./remotion-browser";
 
 // Get current directory
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -18,6 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REMOTION_PKG = join(__dirname, "../../../remotion");
 const REMOTION_ENTRY = join(REMOTION_PKG, "src/index.ts");
 const TEMP_DIR = join(__dirname, "../../temp");
+const PREBUNDLED_BUNDLE_DIR = join(__dirname, "../../remotion-bundle");
 
 // Cached bundle path
 let bundlePath: string | null = null;
@@ -88,6 +90,18 @@ function ensureTempDir(): void {
  * Bundle the Remotion project (cached)
  */
 async function getBundlePath(onProgress?: (pct: number) => void): Promise<string> {
+  // Production: use prebaked bundle produced during Docker build (Option B).
+  if (process.env.NODE_ENV === "production") {
+    if (!existsSync(PREBUNDLED_BUNDLE_DIR)) {
+      throw new Error(
+        `Prebundled Remotion bundle not found at ${PREBUNDLED_BUNDLE_DIR}. ` +
+          `This should be generated during the Docker build step.`
+      );
+    }
+    onProgress?.(100);
+    return PREBUNDLED_BUNDLE_DIR;
+  }
+
   if (bundlePath && existsSync(bundlePath)) {
     onProgress?.(100);
     return bundlePath;
@@ -105,7 +119,7 @@ async function getBundlePath(onProgress?: (pct: number) => void): Promise<string
       }
     },
     // Match Remotion Studio's webpack config so rendering output matches local previews.
-    webpackOverride: enableTailwind,
+    webpackOverride,
   });
 
   console.log(`Bundle complete in ${Date.now() - startTime}ms`);
@@ -141,9 +155,16 @@ export async function renderComposition(
 
     // Select the composition
     console.log(`[render ${username}/${compositionId}] selectComposition...`);
+    const puppeteerInstance = await getSharedRemotionBrowser({
+      chromiumOptions: {
+        // Keep in sync with renderMedia() to avoid env-dependent drift.
+        gl: "swiftshader",
+      },
+    });
     const composition = await selectComposition({
       serveUrl,
       id: compositionId,
+      puppeteerInstance,
       inputProps: {
         userStats,
       },
@@ -164,7 +185,9 @@ export async function renderComposition(
       serveUrl,
       codec: "gif",
       // Important: use PNG frames so alpha is preserved (JPEG frames will matte transparency to white).
-      imageFormat: "png",
+      videoImageFormat: "png",
+      colorSpace: "srgb",
+      puppeteerInstance,
       scale: renderScale,
       outputLocation: outputPath,
       inputProps: {

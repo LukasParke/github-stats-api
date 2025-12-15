@@ -50,6 +50,10 @@ COPY packages/server/package.json ./packages/server/
 # Install all dependencies
 RUN bun install
 
+# Pre-download Remotion's recommended browser (Chrome Headless Shell) at build time.
+# This prevents runtime races (ETXTBSY) when multiple render jobs start simultaneously.
+RUN bun -e "import {ensureBrowser} from '@remotion/renderer'; await ensureBrowser({logLevel: 'info'});"
+
 # ============================================================================
 # Stage 3: Build stage (copy source)
 # ============================================================================
@@ -69,6 +73,9 @@ COPY --from=deps /app/packages ./packages
 
 # Copy source files (this will overwrite source files but preserve node_modules directories)
 COPY . .
+
+# Prebundle Remotion at build time (Option B). The renderer will use this immutable bundle at runtime.
+RUN bun run packages/server/src/scripts/bundle-remotion.ts
 
 # ============================================================================
 # Stage 4: Production runtime
