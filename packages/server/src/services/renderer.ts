@@ -48,6 +48,7 @@ export interface RenderOptions {
   compositionId: CompositionId;
   userStats: UserStats;
   username: string;
+  onProgress?: (event: RenderProgressEvent) => void;
 }
 
 export interface RenderResult {
@@ -56,6 +57,22 @@ export interface RenderResult {
   imageUrl?: string;
   error?: string;
   durationMs: number;
+}
+
+export type RenderProgressStage =
+  | "bundle"
+  | "selectComposition"
+  | "renderMedia"
+  | "readOutput"
+  | "upload"
+  | "cleanup";
+
+export interface RenderProgressEvent {
+  stage: RenderProgressStage;
+  /**
+   * Stage progress from 0..1
+   */
+  progress: number;
 }
 
 /**
@@ -70,8 +87,9 @@ function ensureTempDir(): void {
 /**
  * Bundle the Remotion project (cached)
  */
-async function getBundlePath(): Promise<string> {
+async function getBundlePath(onProgress?: (pct: number) => void): Promise<string> {
   if (bundlePath && existsSync(bundlePath)) {
+    onProgress?.(100);
     return bundlePath;
   }
 
@@ -81,6 +99,7 @@ async function getBundlePath(): Promise<string> {
   bundlePath = await bundle({
     entryPoint: REMOTION_ENTRY,
     onProgress: (progress) => {
+      onProgress?.(progress);
       if (progress % 25 === 0) {
         console.log(`Bundle progress: ${progress}%`);
       }
@@ -100,11 +119,10 @@ export async function renderComposition(
   options: RenderOptions
 ): Promise<RenderResult> {
   const startTime = Date.now();
-  const { compositionId, userStats, username } = options;
+  const { compositionId, userStats, username, onProgress } = options;
 
-  // Render at higher pixel density so GIFs look crisp when displayed smaller (e.g. in GitHub README).
-  // This increases file size; tune down if needed.
-  const renderScale = 2;
+  // Keep scale consistent with Remotion Studio. Override using RENDER_SCALE if you need crisper output.
+  const renderScale = env.RENDER_SCALE;
 
   ensureTempDir();
 
@@ -116,7 +134,9 @@ export async function renderComposition(
   try {
     // Get or create bundle
     console.log(`[render ${username}/${compositionId}] getBundlePath...`);
-    const serveUrl = await getBundlePath();
+    const serveUrl = await getBundlePath((pct) => {
+      onProgress?.({ stage: "bundle", progress: Math.max(0, Math.min(1, pct / 100)) });
+    });
     console.log(`[render ${username}/${compositionId}] serveUrl ready`);
 
     // Select the composition
@@ -128,6 +148,7 @@ export async function renderComposition(
         userStats,
       },
     });
+    onProgress?.({ stage: "selectComposition", progress: 1 });
     console.log(
       `[render ${username}/${compositionId}] composition selected: durationInFrames=${composition.durationInFrames} fps=${composition.fps}`
     );
@@ -151,6 +172,7 @@ export async function renderComposition(
       },
       timeoutInMilliseconds: env.RENDER_TIMEOUT_MS,
       onProgress: ({ progress }) => {
+        onProgress?.({ stage: "renderMedia", progress: Math.max(0, Math.min(1, progress)) });
         if (Math.round(progress * 100) % 25 === 0) {
           console.log(`Render progress: ${Math.round(progress * 100)}%`);
         }
@@ -161,6 +183,7 @@ export async function renderComposition(
     // Read the rendered file
     console.log(`[render ${username}/${compositionId}] reading output file`);
     const gifBuffer = await readFile(outputPath);
+    onProgress?.({ stage: "readOutput", progress: 1 });
     console.log(
       `[render ${username}/${compositionId}] read ${gifBuffer.length} bytes`
     );
@@ -170,11 +193,13 @@ export async function renderComposition(
     console.log(
       `[render ${username}/${compositionId}] uploading to MinIO key=${imageKey}`
     );
+    onProgress?.({ stage: "upload", progress: 0 });
     await uploadImage(imageKey, gifBuffer, {
       "x-amz-meta-username": username,
       "x-amz-meta-composition": compositionId,
       "x-amz-meta-rendered-at": new Date().toISOString(),
     });
+    onProgress?.({ stage: "upload", progress: 1 });
     console.log(`[render ${username}/${compositionId}] upload done`);
 
     const imageUrl = getPublicUrl(imageKey);
@@ -182,6 +207,7 @@ export async function renderComposition(
 
     // Clean up temp file
     rmSync(outputPath, { force: true });
+    onProgress?.({ stage: "cleanup", progress: 1 });
 
     const durationMs = Date.now() - startTime;
     console.log(`Rendered ${compositionId} for ${username} in ${durationMs}ms`);

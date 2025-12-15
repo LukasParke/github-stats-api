@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GitHub Stats Render UI</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div class="brand">
+          <div class="logo">GS</div>
+          <div class="brandText">
+            <div class="title">GitHub Stats</div>
+            <div class="subtitle">Render UI</div>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="link" href="/api/docs" target="_blank" rel="noreferrer">API Docs</a>
+          <a class="link" href="/api/openapi.json" target="_blank" rel="noreferrer">OpenAPI</a>
+        </nav>
+      </header>
+
+      <main class="main">
+        <section class="card">
+          <div class="row">
+            <div class="field">
+              <label for="username">GitHub username</label>
+              <input id="username" name="username" placeholder="octocat" autocomplete="off" />
+              <div class="hint">Tip: the GitHub App must be installed for that user/org to render.</div>
+            </div>
+
+            <div class="actions">
+              <button id="loadCompositions" class="btn secondary" type="button">Reload compositions</button>
+              <button id="renderAll" class="btn" type="button">Render all</button>
+            </div>
+          </div>
+
+          <div id="installBanner" class="banner hidden" role="alert">
+            <div class="bannerTitle">Installation required</div>
+            <div class="bannerBody">
+              <div id="installMessage"></div>
+              <div class="bannerLinks">
+                <a id="installLink" class="btn small" href="#" target="_blank" rel="noreferrer">Open install link</a>
+                <button id="dismissInstall" class="btn secondary small" type="button">Dismiss</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="split">
+          <section class="card">
+            <div class="sectionHeader">
+              <div class="sectionTitle">Compositions</div>
+              <div class="sectionMeta" id="compositionMeta">Loading…</div>
+            </div>
+
+            <div class="filters">
+              <button class="chip active" data-filter="all" type="button">All</button>
+              <button class="chip" data-filter="readme" type="button">Readme</button>
+              <button class="chip" data-filter="commitStreak" type="button">Commit streak</button>
+              <button class="chip" data-filter="topLanguages" type="button">Top languages</button>
+              <button class="chip" data-filter="contribution" type="button">Contribution</button>
+              <button class="chip" data-filter="commitGraph" type="button">Commit graph</button>
+            </div>
+
+            <div id="compositions" class="grid"></div>
+          </section>
+
+          <section class="card">
+            <div class="sectionHeader">
+              <div class="sectionTitle">Jobs</div>
+              <div class="sectionMeta" id="jobsMeta">No jobs yet</div>
+            </div>
+            <div id="jobs" class="jobs"></div>
+          </section>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div>UI is served by the API. Rendering happens in the worker.</div>
+      </footer>
+    </div>
+
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>
+
+

@@ -45,6 +45,9 @@ export const env = createEnv({
     // Rendering
     RENDER_CONCURRENCY: z.coerce.number().default(2),
     RENDER_TIMEOUT_MS: z.coerce.number().default(60000),
+    // Render scale factor. Keep in sync with Remotion Studio via packages/remotion/remotion.config.ts.
+    // Default 1 for parity with Studio preview/renders unless explicitly overridden.
+    RENDER_SCALE: z.coerce.number().default(1),
 
     // Optional base URL for generating absolute URLs (e.g. https://api.example.com)
     // If unset, APIs will return relative URLs.
@@ -66,6 +69,7 @@ export const env = createEnv({
     MINIO_USE_SSL: process.env.MINIO_USE_SSL,
     RENDER_CONCURRENCY: process.env.RENDER_CONCURRENCY,
     RENDER_TIMEOUT_MS: process.env.RENDER_TIMEOUT_MS,
+    RENDER_SCALE: process.env.RENDER_SCALE,
     PUBLIC_URL: process.env.PUBLIC_URL,
   },
   emptyStringAsUndefined: true,

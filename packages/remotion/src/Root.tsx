@@ -1,3 +1,4 @@
+import '@fontsource/inter/latin.css';
 import { CalculateMetadataFunction, Composition, getInputProps } from 'remotion';
 import './styles/global.css';
 
@@ -173,22 +174,38 @@ const compositions: Array<{
 ];
 
 export const RemotionRoot = () => {
-	const calculateMetadata: CalculateMetadataFunction<MainProps> = async (props) => {
-		const inputProps = getInputProps();
-		const usernames = inputProps.usernames as string[] | undefined;
+	const calculateMetadata: CalculateMetadataFunction<MainProps> = async ({
+		props,
+		abortSignal,
+	}) => {
+		// If the caller provided userStats via inputProps (server render), trust it.
+		// This keeps renders deterministic and prevents Studio-vs-server divergence.
+		const inputProps = getInputProps() as Partial<MainProps> & {
+			usernames?: string[];
+		};
 
+		if (inputProps.userStats) {
+			return {
+				props: {
+					...props,
+					userStats: inputProps.userStats,
+				},
+			};
+		}
+
+		const usernames = inputProps.usernames;
 		let userStats = defaultStats;
-		
-		// Always try to fetch fresh stats (from URL or usernames)
+
+		// Studio fallback: fetch stats for preview if userStats was not explicitly provided.
 		try {
-			userStats = await getUserStats(usernames);
+			userStats = await getUserStats(usernames, abortSignal);
 		} catch (error) {
 			console.error('Failed to fetch user stats, using defaults:', error);
 		}
 
 		return {
 			props: {
-				...props.props,
+				...props,
 				userStats,
 			},
 		};

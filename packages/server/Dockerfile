@@ -10,7 +10,9 @@ RUN apt-get update && apt-get install -y \
     chromium \
     curl \
     ffmpeg \
+    fonts-dejavu-core \
     fonts-liberation \
+    fonts-noto-core \
     fonts-noto-color-emoji \
     libatk-bridge2.0-0 \
     libatk1.0-0 \

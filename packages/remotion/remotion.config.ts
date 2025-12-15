@@ -6,7 +6,13 @@
  */
 
 import { Config } from "@remotion/cli/config";
-import { enableTailwind } from '@remotion/tailwind-v4';
+import { webpackOverride } from './src/webpack-override';
+
+// Keep scale consistent between Studio renders and server renders.
+// The server uses packages/server/src/config/env.ts -> RENDER_SCALE.
+const scaleFromEnv = Number(process.env.RENDER_SCALE ?? 1);
+const scale = Number.isFinite(scaleFromEnv) && scaleFromEnv > 0 ? scaleFromEnv : 1;
+Config.setScale(scale);
 
 // Output format
 Config.setCodec('gif');
@@ -18,7 +24,7 @@ Config.setVideoImageFormat('png');
 Config.setOverwriteOutput(true);
 
 // Enable Tailwind CSS v4
-Config.overrideWebpackConfig(enableTailwind);
+Config.overrideWebpackConfig(webpackOverride);
 
 // Performance optimizations for smaller GIF sizes:
 // - Lower FPS (20) is set in src/config.ts

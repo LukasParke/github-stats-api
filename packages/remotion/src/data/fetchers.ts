@@ -7,8 +7,11 @@ const statsTemplate = (username: string) =>
 /**
  * Fetch stats from a direct URL
  */
-export async function getStatsFromUrl(url: string): Promise<UserStats> {
-	const resp = await fetch(url);
+export async function getStatsFromUrl(
+	url: string,
+	signal?: AbortSignal
+): Promise<UserStats> {
+	const resp = await fetch(url, signal ? { signal } : undefined);
 	if (!resp.ok) {
 		throw new Error(`Failed to fetch stats from ${url}: ${resp.status}`);
 	}
@@ -18,12 +21,18 @@ export async function getStatsFromUrl(url: string): Promise<UserStats> {
 /**
  * Fetch stats for multiple GitHub users and merge them
  */
-export async function getUsersStatsFromGithub(usernames: string[]): Promise<UserStats[]> {
+export async function getUsersStatsFromGithub(
+	usernames: string[],
+	signal?: AbortSignal
+): Promise<UserStats[]> {
 	const stats: UserStats[] = [];
 
 	for (const username of usernames) {
 		try {
-			const resp = await fetch(statsTemplate(username));
+			const resp = await fetch(
+				statsTemplate(username),
+				signal ? { signal } : undefined
+			);
 			if (resp.ok) {
 				const userStats = await resp.json();
 				stats.push(userStats);
@@ -107,15 +116,18 @@ function sortAndMergeTopLanguages(userStats: UserStats): UserStats {
  * Main function to get user stats
  * Uses direct URL from settings if available, otherwise fetches by usernames
  */
-export async function getUserStats(usernames?: string[]): Promise<UserStats> {
+export async function getUserStats(
+	usernames?: string[],
+	signal?: AbortSignal
+): Promise<UserStats> {
 	// If a direct stats URL is configured, use that
 	if (statsSettings.statsUrl) {
-		return getStatsFromUrl(statsSettings.statsUrl);
+		return getStatsFromUrl(statsSettings.statsUrl, signal);
 	}
 	
 	// Otherwise, fetch by usernames
 	const names = usernames || statsSettings.usernames;
-	const stats = await getUsersStatsFromGithub(names);
+	const stats = await getUsersStatsFromGithub(names, signal);
 	return mergeUsersStats(stats);
 }
 

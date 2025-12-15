@@ -8,6 +8,7 @@ import { logLoadedConfig, runStartupChecks } from "./config/startup";
 import { apiRoutes } from "./routes/api";
 import { webhookRoutes } from "./routes/webhooks";
 import { healthRoutes } from "./routes/health";
+import { uiRoutes } from "./routes/ui";
 import { redis, closeQueue } from "./services/queue";
 
 const app = new OpenAPIHono();
@@ -47,6 +48,7 @@ app.notFound((c) => {
 app.route("/health", healthRoutes);
 app.route("/api", apiRoutes);
 app.route("/webhooks", webhookRoutes);
+app.route("/", uiRoutes);
 
 // OpenAPI JSON spec endpoint
 app.doc("/api/openapi.json", {
@@ -98,16 +100,6 @@ app.get(
     },
   })
 );
-
-// Root route
-app.get("/", (c) => {
-  return c.json({
-    name: "GitHub Stats API",
-    version: "1.0.0",
-    docs: "/api/docs",
-    openapi: "/api/openapi.json",
-  });
-});
 
 // Graceful shutdown
 async function shutdown(): Promise<void> {

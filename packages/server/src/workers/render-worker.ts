@@ -68,14 +68,54 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
     );
     console.log(`${prefix} data: ${JSON.stringify(job.data)}`);
 
+    const reportProgress = (() => {
+      let lastAt = 0;
+      let lastValue = -1;
+      return async (value: number) => {
+        const next = Math.max(0, Math.min(100, Math.round(value)));
+        const now = Date.now();
+        if (next === lastValue) return;
+        // Throttle progress updates to avoid overwhelming Redis.
+        if (next !== 100 && now - lastAt < 250) return;
+        lastAt = now;
+        lastValue = next;
+        await job.updateProgress(next);
+      };
+    })();
+
+    const toOverallProgress = (stage: string, stageProgress01: number): number => {
+      const p = Math.max(0, Math.min(1, stageProgress01));
+      switch (stage) {
+        case "bundle":
+          // 35..50
+          return 35 + p * 15;
+        case "selectComposition":
+          // 50..55
+          return 50 + p * 5;
+        case "renderMedia":
+          // 55..95
+          return 55 + p * 40;
+        case "readOutput":
+          // 95..97
+          return 95 + p * 2;
+        case "upload":
+          // 97..99
+          return 97 + p * 2;
+        case "cleanup":
+          // 99..100
+          return 99 + p * 1;
+        default:
+          return p * 100;
+      }
+    };
+
     try {
       if (!installationId) {
         throw new Error(`Install required: ${env.GITHUB_APP_INSTALL_URL}`);
       }
 
-      // Update progress
-      await job.updateProgress(10);
-      console.log(`${prefix} progress=10 (starting)`);
+      await reportProgress(5);
+      console.log(`${prefix} progress=5 (starting)`);
 
       // Fetch fresh user stats
       let userStats;
@@ -84,8 +124,8 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
         console.log(`${prefix} fetching GitHub stats...`);
         userStats = await fetchUserStats(installationId, username);
         console.log(`${prefix} fetched GitHub stats in ${Date.now() - t0}ms`);
-        await job.updateProgress(30);
-        console.log(`${prefix} progress=30 (stats fetched)`);
+        await reportProgress(35);
+        console.log(`${prefix} progress=35 (stats fetched)`);
       } catch (error) {
         console.error(`Failed to fetch stats for ${username}:`, error);
         throw new Error(
@@ -96,7 +136,7 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
       }
 
       // Render the composition
-      await job.updateProgress(40);
+      await reportProgress(40);
       console.log(`${prefix} progress=40 (render starting)`);
       const renderStart = Date.now();
 
@@ -104,6 +144,10 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
         compositionId: compositionId as CompositionId,
         userStats,
         username,
+        onProgress: async (event) => {
+          const overall = toOverallProgress(event.stage, event.progress);
+          await reportProgress(overall);
+        },
       });
 
       console.log(
@@ -111,8 +155,8 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
           result.success
         }`
       );
-      await job.updateProgress(90);
-      console.log(`${prefix} progress=90 (render done)`);
+      await reportProgress(95);
+      console.log(`${prefix} progress=95 (render done)`);
 
       if (!result.success) {
         throw new Error(result.error || "Render failed");
@@ -121,7 +165,7 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
       // Note: We intentionally do not cache image URLs in Redis anymore.
       // The API serves images directly from MinIO via /api/image/:username/:composition.
 
-      await job.updateProgress(100);
+      await reportProgress(100);
       console.log(`${prefix} progress=100 (done)`);
 
       const durationMs = Date.now() - startTime;
