@@ -17,8 +17,8 @@ export async function convertVideoToWebP(
   videoBuffer: Buffer,
   options?: { quality?: number; fps?: number }
 ): Promise<Buffer> {
-  const quality = options?.quality ?? 80;
-  const fps = options?.fps ?? 20;
+  const quality = options?.quality ?? 85;
+  const fps = options?.fps ?? 30;
 
   // Create temporary file paths
   const inputPath = join(TEMP_DIR, `input-${Date.now()}-${Math.random().toString(36).substring(7)}.mp4`);
@@ -28,16 +28,19 @@ export async function convertVideoToWebP(
     // Write input video to temp file
     await writeFile(inputPath, videoBuffer);
 
-    // FFmpeg command to convert MP4 to animated WebP
+    // FFmpeg command to convert MP4 to animated WebP (optimized for file size)
     // -i: input file
-    // -vf "fps=20": set frame rate (matches Remotion)
+    // -vf "fps=30": set frame rate (reduced from 50fps for web optimization)
+    // -c:v libwebp: explicitly use libwebp codec (required for proper encoding)
+    // -quality 85: WebP quality (0-100, balanced quality/size)
+    // -compression_level 6: maximum compression (slower but much smaller files)
+    // -method 6: highest quality encoding method
     // -loop 0: enable looping
-    // -quality 80: WebP quality (0-100)
-    // -preset default: encoding preset
+    // -pix_fmt yuv420p: required pixel format for WebP encoding
     // -an: remove audio
     // -vsync 0: passthrough timestamps
     // -y: overwrite output file
-    const ffmpegCommand = `ffmpeg -i "${inputPath}" -vf "fps=${fps}" -loop 0 -quality ${quality} -preset default -an -vsync 0 -y "${outputPath}"`;
+    const ffmpegCommand = `ffmpeg -i "${inputPath}" -vf "fps=${fps}" -c:v libwebp -quality ${quality} -compression_level 6 -method 6 -loop 0 -an -vsync 0 -pix_fmt yuv420p -y "${outputPath}"`;
 
     console.log(`[ffmpeg] Converting MP4 to WebP: ${inputPath} -> ${outputPath}`);
     const { stderr } = await execAsync(ffmpegCommand);

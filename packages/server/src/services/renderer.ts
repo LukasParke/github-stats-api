@@ -226,12 +226,23 @@ export async function renderComposition(
     );
     onProgress?.({ stage: "convert", progress: 0 });
     const webpBuffer = await convertVideoToWebP(mp4Buffer, {
-      quality: 80,
-      fps: composition.fps,
+      quality: 85,
+      fps: 30, // Use 30fps for web optimization (reduced from composition.fps)
     });
     onProgress?.({ stage: "convert", progress: 1 });
+    const mp4SizeMB = (mp4Buffer.length / (1024 * 1024)).toFixed(2);
+    const webpSizeMB = (webpBuffer.length / (1024 * 1024)).toFixed(2);
+    const sizeReduction = (
+      (1 - webpBuffer.length / mp4Buffer.length) *
+      100
+    ).toFixed(1);
+    const sizeRatio = (mp4Buffer.length / webpBuffer.length).toFixed(2);
+
     console.log(
-      `[render ${username}/${compositionId}] converted to WebP: ${webpBuffer.length} bytes`
+      `[render ${username}/${compositionId}] converted to WebP: ${webpBuffer.length} bytes (${webpSizeMB} MB)`
+    );
+    console.log(
+      `[render ${username}/${compositionId}] 📊 Size comparison: MP4=${mp4SizeMB}MB → WebP=${webpSizeMB}MB (${sizeReduction}% reduction, ${sizeRatio}x smaller)`
     );
 
     // Upload to MinIO

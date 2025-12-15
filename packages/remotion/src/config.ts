@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-// Optimized settings for smaller GIF file size
-export const FPS = 50;
+// Optimized settings for web animations (30fps is standard for web)
+export const FPS = 30;
 export const DurationInSeconds = 8;
 export const DurationInFrames = FPS * DurationInSeconds;
 

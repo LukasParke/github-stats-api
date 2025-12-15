@@ -35,7 +35,7 @@ export function AuroraEffect({ theme = 'dark', className }: AuroraEffectProps) {
 			x: 20 + i * 25 + xOffset,
 			y: 30 + (i % 2) * 40 + yOffset,
 			scale,
-			blur: 40 + i * 10,
+			blur: 30 + i * 10, // Reduced from 40-90px to 30-70px for better compression
 		};
 	});
 
@@ -63,7 +63,7 @@ export function AuroraEffect({ theme = 'dark', className }: AuroraEffectProps) {
 						background: `radial-gradient(circle, ${blob.color} 0%, transparent 70%)`,
 						transform: `translate(-50%, -50%) scale(${blob.scale})`,
 						filter: `blur(${blob.blur}px)`,
-						opacity: 0.6,
+						opacity: 0.5, // Reduced from 0.6 for better compression and quality perception
 					}}
 				/>
 			))}
