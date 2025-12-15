@@ -43,7 +43,7 @@ export const env = createEnv({
       .transform((v) => v === "true"),
 
     // Rendering
-    RENDER_CONCURRENCY: z.coerce.number().default(2),
+    RENDER_CONCURRENCY: z.coerce.number().default(4),
     RENDER_TIMEOUT_MS: z.coerce.number().default(60000),
     // Render scale factor. Keep in sync with Remotion Studio via packages/remotion/remotion.config.ts.
     // Default 1 for parity with Studio preview/renders unless explicitly overridden.

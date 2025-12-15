@@ -199,8 +199,8 @@ const worker = new Worker<RenderJobData, RenderJobResult>(
     connection: redis,
     concurrency: env.RENDER_CONCURRENCY,
     limiter: {
-      max: 10,
-      duration: 60000, // 10 jobs per minute max
+      max: 20,
+      duration: 60000, // 20 jobs per minute max
     },
   }
 );
