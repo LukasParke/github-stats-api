@@ -31,7 +31,7 @@ export function TopLanguagesCard({
 	const total = userStats.codeByteTotal;
 
 	return (
-		<AbsoluteFill style={{ backgroundColor: 'transparent' }}>
+		<AbsoluteFill style={{ backgroundColor: theme === 'dark' ? '#0d1117' : '#ffffff' }}>
 			<div
 				style={{
 					width: '100%',

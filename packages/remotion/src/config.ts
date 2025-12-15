@@ -16,7 +16,7 @@ export type Theme = "light" | "dark";
 
 export const themes = {
   light: {
-    background: "transparent",
+    background: "#ffffff",
     text: "#24292f",
     textMuted: "#57606a",
     accent: "#0969da",
@@ -25,7 +25,7 @@ export const themes = {
     geminiColors: ["#FFB7C5", "#FFDDB7", "#B1C5FF", "#4FABFF", "#076EFF"],
   },
   dark: {
-    background: "transparent",
+    background: "#0d1117",
     text: "#f0f6fc",
     textMuted: "#8b949e",
     accent: "#58a6ff",

@@ -97,7 +97,7 @@ export function CommitGraphCard({
 	};
 
 	return (
-		<AbsoluteFill style={{ backgroundColor: 'transparent' }}>
+		<AbsoluteFill style={{ backgroundColor: theme === 'dark' ? '#0d1117' : '#ffffff' }}>
 			<div
 				style={{
 					width: '100%',

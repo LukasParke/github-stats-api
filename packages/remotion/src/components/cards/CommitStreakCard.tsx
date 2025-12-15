@@ -28,7 +28,7 @@ export function CommitStreakCard({ userStats, theme = 'dark' }: CommitStreakCard
 	const bgOpacity = theme === 'dark' ? cardSettings.bgOpacityDark : cardSettings.bgOpacityLight;
 
 	return (
-		<AbsoluteFill style={{ backgroundColor: 'transparent' }}>
+		<AbsoluteFill style={{ backgroundColor: theme === 'dark' ? '#0d1117' : '#ffffff' }}>
 			<div
 				style={{
 					width: '100%',

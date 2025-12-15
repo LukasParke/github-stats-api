@@ -2,7 +2,7 @@
 
 /* Theme CSS Variables */
 :root {
-	--bg-primary: transparent;
+	--bg-primary: #0d1117;
 	--text-primary: #f0f6fc;
 	--text-muted: #8b949e;
 	--accent: #58a6ff;
@@ -11,7 +11,7 @@
 }
 
 .theme-light {
-	--bg-primary: transparent;
+	--bg-primary: #ffffff;
 	--text-primary: #24292f;
 	--text-muted: #57606a;
 	--accent: #0969da;
@@ -20,7 +20,7 @@
 }
 
 .theme-dark {
-	--bg-primary: transparent;
+	--bg-primary: #0d1117;
 	--text-primary: #f0f6fc;
 	--text-muted: #8b949e;
 	--accent: #58a6ff;

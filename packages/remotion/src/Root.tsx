@@ -1,5 +1,5 @@
 import '@fontsource/inter/latin.css';
-import { AbsoluteFill, CalculateMetadataFunction, Composition, getInputProps, getRemotionEnvironment } from 'remotion';
+import { AbsoluteFill, CalculateMetadataFunction, Composition, getInputProps } from 'remotion';
 import './styles/global.css';
 
 import { getUserStats } from './data/fetchers';
@@ -174,9 +174,6 @@ const compositions: Array<{
 ];
 
 export const RemotionRoot = () => {
-	const env = getRemotionEnvironment();
-	const showPreviewBackground = !env.isRendering;
-
 	const calculateMetadata: CalculateMetadataFunction<MainProps> = async ({
 		props,
 		abortSignal,
@@ -223,13 +220,8 @@ export const RemotionRoot = () => {
 					component={(props: MainProps) => (
 						<AbsoluteFill
 							style={{
-								// Studio/preview: show GitHub-like page background so light/dark previews are accurate.
-								// Rendering (server/CLI): keep transparent so output can be embedded on any background.
-								backgroundColor: showPreviewBackground
-									? theme === 'dark'
-										? '#0d1117'
-										: '#ffffff'
-									: 'transparent',
+								// Always use GitHub background colors for seamless display in READMEs
+								backgroundColor: theme === 'dark' ? '#0d1117' : '#ffffff',
 							}}
 						>
 							<Component
