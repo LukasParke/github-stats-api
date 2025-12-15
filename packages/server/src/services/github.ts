@@ -1,6 +1,6 @@
-import { App } from '@octokit/app';
-import { Octokit } from '@octokit/core';
-import { env } from '../config/env';
+import { App } from "@octokit/app";
+import { Octokit } from "@octokit/core";
+import { env } from "../config/env";
 
 // User stats type (mirrors the Remotion config type)
 export interface UserStats {
@@ -124,7 +124,9 @@ const USER_STATS_QUERY = `
 /**
  * Get an authenticated Octokit instance for an installation
  */
-export async function getInstallationOctokit(installationId: number): Promise<Octokit> {
+export async function getInstallationOctokit(
+  installationId: number
+): Promise<Octokit> {
   return await app.getInstallationOctokit(installationId);
 }
 
@@ -135,7 +137,7 @@ export async function getInstallationOctokit(installationId: number): Promise<Oc
 export async function checkGitHubAppAuth(): Promise<void> {
   // This endpoint returns metadata about the authenticated GitHub App.
   // If credentials are invalid, this will fail with 401/403.
-  await app.octokit.request('GET /app');
+  await app.octokit.request("GET /app");
 }
 
 /**
@@ -154,9 +156,12 @@ export async function fetchUserStats(
     octokit = new Octokit();
   }
 
-  const response = await octokit.graphql<{ user: GitHubUser }>(USER_STATS_QUERY, {
-    login: username,
-  });
+  const response = await octokit.graphql<{ user: GitHubUser }>(
+    USER_STATS_QUERY,
+    {
+      login: username,
+    }
+  );
 
   const user = response.user;
   if (!user) {
@@ -202,14 +207,18 @@ export async function fetchUserStats(
   const { currentStreak, longestStreak } = calculateStreaks(allDays);
   const contributionsByDay = allDays.reduce(
     (acc: Record<string, number>, day: ContributionDay) => {
-      const dayOfWeek = new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' });
+      const dayOfWeek = new Date(day.date).toLocaleDateString("en-US", {
+        weekday: "long",
+      });
       acc[dayOfWeek] = (acc[dayOfWeek] || 0) + day.contributionCount;
       return acc;
     },
     {} as Record<string, number>
   );
 
-  const mostActiveDay = Object.entries(contributionsByDay).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Monday';
+  const mostActiveDay =
+    Object.entries(contributionsByDay).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    "Monday";
 
   const contributions = user.contributionsCollection;
 
@@ -231,10 +240,12 @@ export async function fetchUserStats(
     totalPullRequests: contributions.totalPullRequestContributions,
     totalPullRequestReviews: contributions.totalPullRequestReviewContributions,
     totalContributions: calendar.totalContributions,
-    repoViews: 0, // Not available via API
-    linesOfCodeChanged: 0, // Would require additional API calls
-    linesAdded: 0,
-    linesDeleted: 0,
+    // These values come from external stats repo (not available via GitHub API)
+    // They should be preserved if already present in userStats, otherwise default to 0
+    repoViews: 0, // Not available via API - requires external stats source
+    linesOfCodeChanged: 0, // Not available via API - requires external stats source
+    linesAdded: 0, // Not available via API - requires external stats source
+    linesDeleted: 0, // Not available via API - requires external stats source
     codeByteTotal: topLanguages.reduce((sum, lang) => sum + lang.value, 0),
     topLanguages,
     contributionStats: {
@@ -251,8 +262,10 @@ export async function fetchUserStats(
       restrictedContributionsCount: contributions.restrictedContributionsCount,
       totalIssueContributions: contributions.totalIssueContributions,
       totalRepositoryContributions: contributions.totalRepositoryContributions,
-      totalPullRequestContributions: contributions.totalPullRequestContributions,
-      totalPullRequestReviewContributions: contributions.totalPullRequestReviewContributions,
+      totalPullRequestContributions:
+        contributions.totalPullRequestContributions,
+      totalPullRequestReviewContributions:
+        contributions.totalPullRequestReviewContributions,
       contributionCalendar: {
         totalContributions: calendar.totalContributions,
         weeks: calendar.weeks,
@@ -278,7 +291,9 @@ function calculateStreaks(days: ContributionDay[]): {
   longestStreak: number;
 } {
   // Sort by date descending (most recent first)
-  const sortedDays = [...days].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sortedDays = [...days].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 
   let currentStreak = 0;
   let longestStreak = 0;
@@ -309,20 +324,25 @@ function calculateStreaks(days: ContributionDay[]): {
 /**
  * Get the username associated with an installation
  */
-export async function getInstallationUser(installationId: number): Promise<string | null> {
+export async function getInstallationUser(
+  installationId: number
+): Promise<string | null> {
   try {
     const octokit = await getInstallationOctokit(installationId);
-    const response = await octokit.request('GET /app/installations/{installation_id}', {
-      installation_id: installationId,
-    });
+    const response = await octokit.request(
+      "GET /app/installations/{installation_id}",
+      {
+        installation_id: installationId,
+      }
+    );
 
     const account = response.data.account;
-    if (account && 'login' in account) {
+    if (account && "login" in account) {
       return account.login;
     }
     return null;
   } catch (error) {
-    console.error('Failed to get installation user:', error);
+    console.error("Failed to get installation user:", error);
     return null;
   }
 }

@@ -69,10 +69,80 @@ export function ReadmeCard({
 		{ icon: <ForkIcon size={32} />, label: 'Forks', value: userStats.forkCount },
 		{ icon: <CommitIcon size={32} />, label: 'Commits', value: userStats.totalCommits },
 		{ icon: <PullRequestIcon size={32} />, label: 'Pull Requests', value: userStats.totalPullRequests },
-		{ icon: <ViewIcon size={32} />, label: 'Repo Views', value: userStats.repoViews },
-		{ icon: <CodeIcon size={32} />, label: 'Lines Changed', value: userStats.linesOfCodeChanged, format: 'short' as const },
-		{ icon: <ContributionIcon size={32} />, label: 'Contributions', value: userStats.totalContributions },
 	];
+
+	// Add followers if available
+	if (userStats.followers !== undefined) {
+		stats.push({
+			icon: <ContributionIcon size={32} />, // Using ContributionIcon as placeholder for followers
+			label: 'Followers',
+			value: userStats.followers,
+		});
+	}
+
+	// Add pull request reviews if available
+	if (userStats.totalPullRequestReviews !== undefined && userStats.totalPullRequestReviews > 0) {
+		stats.push({
+			icon: <PullRequestIcon size={32} />,
+			label: 'PR Reviews',
+			value: userStats.totalPullRequestReviews,
+		});
+	}
+
+	// Add repo views
+	stats.push({
+		icon: <ViewIcon size={32} />,
+		label: 'Repo Views',
+		value: userStats.repoViews,
+	});
+
+	// Add lines added and deleted if available
+	if (userStats.linesAdded !== undefined && userStats.linesAdded > 0) {
+		stats.push({
+			icon: <CodeIcon size={32} />,
+			label: 'Lines Added',
+			value: userStats.linesAdded,
+			format: 'short' as const,
+		});
+	}
+
+	if (userStats.linesDeleted !== undefined && userStats.linesDeleted > 0) {
+		stats.push({
+			icon: <CodeIcon size={32} />,
+			label: 'Lines Deleted',
+			value: userStats.linesDeleted,
+			format: 'short' as const,
+		});
+	}
+
+	// Add lines changed (fallback if added/deleted not available)
+	if ((userStats.linesAdded === undefined || userStats.linesAdded === 0) && 
+	    (userStats.linesDeleted === undefined || userStats.linesDeleted === 0) &&
+	    userStats.linesOfCodeChanged > 0) {
+		stats.push({
+			icon: <CodeIcon size={32} />,
+			label: 'Lines Changed',
+			value: userStats.linesOfCodeChanged,
+			format: 'short' as const,
+		});
+	}
+
+	// Add issues if available
+	const totalIssues = (userStats.openIssues || 0) + (userStats.closedIssues || 0);
+	if (totalIssues > 0) {
+		stats.push({
+			icon: <ContributionIcon size={32} />, // Using ContributionIcon as placeholder for issues
+			label: 'Issues',
+			value: totalIssues,
+		});
+	}
+
+	// Add contributions
+	stats.push({
+		icon: <ContributionIcon size={32} />,
+		label: 'Contributions',
+		value: userStats.totalContributions,
+	});
 
 	// Add streak if available
 	if (userStats.contributionStats?.currentStreak) {
@@ -185,7 +255,7 @@ export function ReadmeCard({
 							zIndex: 1,
 						}}
 					>
-						{stats.slice(0, 7).map((stat, i) => (
+						{stats.map((stat, i) => (
 							<StatRow
 								key={stat.label}
 								icon={stat.icon}

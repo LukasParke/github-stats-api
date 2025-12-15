@@ -25,20 +25,7 @@ function getContributionLevel(count: number): number {
 }
 
 /**
- * Get month abbreviation from date string
- */
-function getMonthAbbr(dateStr: string): string {
-	const date = new Date(dateStr);
-	return date.toLocaleDateString('en-US', { month: 'short' });
-}
-
-/**
- * Get day of week abbreviation (S, M, T, W, T, F, S)
- */
-const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-/**
- * GitHub-style contribution graph with real data only, month/day labels, and animations
+ * GitHub-style contribution graph with real data only and animations
  */
 export function CommitGraphCard({ 
 	userStats, 
@@ -97,11 +84,9 @@ export function CommitGraphCard({
 		);
 	}
 
-	// Calculate graph dimensions to fit within card
+	// Calculate graph dimensions to fit within card - no labels, use full width
 	const cardInnerWidth = 900 - (cardSettings.outerPadding * 2) - (cardSettings.padding * 2);
-	const dayLabelWidth = 48; // Space for day labels on left
-	const monthLabelHeight = 32; // Space for month labels on top
-	const availableGraphWidth = cardInnerWidth - dayLabelWidth;
+	const availableGraphWidth = cardInnerWidth; // Use full width since no labels
 	
 	// Calculate square size to fit actual number of weeks
 	const gap = commitGraphSettings.gap;
@@ -113,30 +98,19 @@ export function CommitGraphCard({
 	const graphWidth = targetWeeks * (squareSize + gap) - gap;
 	const graphHeight = 7 * (squareSize + gap) - gap;
 	
-	// Total SVG dimensions
-	const svgWidth = dayLabelWidth + graphWidth;
-	const svgHeight = monthLabelHeight + graphHeight;
+	// Total SVG dimensions (no labels, so same as graph)
+	const svgWidth = graphWidth;
+	const svgHeight = graphHeight;
 
 	// Process contribution data into levels - ONLY REAL DATA
 	const graphData: Array<Array<{ level: number; date: string }>> = [];
-	const monthPositions: Array<{ weekIndex: number; month: string }> = [];
 	
-	let lastMonth = '';
-	weeks.forEach((week, weekIndex) => {
+	weeks.forEach((week) => {
 		const weekData: Array<{ level: number; date: string }> = [];
 		
-		week.contributionDays.forEach((day, dayIndex) => {
+		week.contributionDays.forEach((day) => {
 			const level = getContributionLevel(day.contributionCount || 0);
 			weekData.push({ level, date: day.date || '' });
-			
-			// Track month boundaries for labels (check first day of week)
-			if (dayIndex === 0 && day.date) {
-				const month = getMonthAbbr(day.date);
-				if (month !== lastMonth) {
-					monthPositions.push({ weekIndex, month });
-					lastMonth = month;
-				}
-			}
 		});
 		
 		graphData.push(weekData);
@@ -199,7 +173,6 @@ export function CommitGraphCard({
 							: `rgba(255, 255, 255, ${bgOpacity})`,
 						borderRadius: cardSettings.borderRadius,
 						padding: cardSettings.padding,
-						paddingBottom: cardSettings.padding + 4,
 						position: 'relative',
 						overflow: 'hidden',
 						border: `1px solid ${theme === 'dark' ? 'rgba(48, 54, 61, 0.3)' : 'rgba(208, 215, 222, 0.3)'}`,
@@ -261,58 +234,8 @@ export function CommitGraphCard({
 							height={svgHeight}
 							style={{ overflow: 'visible' }}
 						>
-							{/* Month Labels */}
-							{monthPositions.map(({ weekIndex, month }, idx) => {
-								const x = dayLabelWidth + weekIndex * (squareSize + gap);
-								const monthOpacity = interpolate(
-									frame - idx * 2,
-									[0, 15],
-									[0, 1],
-									{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
-								);
-								
-								return (
-									<text
-										key={`month-${weekIndex}`}
-										x={x}
-										y={24}
-										fontSize={22}
-										fill={themeColors.textMuted}
-										opacity={monthOpacity}
-										style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif' }}
-									>
-										{month}
-									</text>
-								);
-							})}
-
-							{/* Day Labels */}
-							{dayLabels.map((day, dayIndex) => {
-								const dayOpacity = interpolate(
-									frame - dayIndex * 2,
-									[0, 15],
-									[0, 1],
-									{ extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }
-								);
-								
-								return (
-									<text
-										key={`day-${dayIndex}`}
-										x={dayLabelWidth - 12}
-										y={monthLabelHeight + dayIndex * (squareSize + gap) + squareSize / 2 + 8}
-										fontSize={22}
-										fill={themeColors.textMuted}
-										opacity={dayOpacity}
-										textAnchor="end"
-										style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif' }}
-									>
-										{day}
-									</text>
-								);
-							})}
-
 							{/* Contribution Squares */}
-							<g transform={`translate(${dayLabelWidth}, ${monthLabelHeight})`}>
+							<g>
 								{graphData.map((week, weekIndex) =>
 									week.map(({ level, date }, dayIndex) => {
 										const x = weekIndex * (squareSize + gap);
@@ -359,38 +282,6 @@ export function CommitGraphCard({
 								)}
 							</g>
 						</svg>
-					</div>
-
-					{/* Legend */}
-					<div
-						style={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'flex-end',
-							gap: 6,
-							marginTop: 12,
-							position: 'relative',
-							zIndex: 1,
-							...fadeInAndSlideUp(frame, 50),
-						}}
-					>
-						<span style={{ fontSize: 18, color: themeColors.textMuted, marginRight: 6 }}>
-							Less
-						</span>
-						{[0, 1, 2, 3, 4].map((level) => (
-							<div
-								key={level}
-								style={{
-									width: 16,
-									height: 16,
-									borderRadius: 4,
-									backgroundColor: getColor(level),
-								}}
-							/>
-						))}
-						<span style={{ fontSize: 18, color: themeColors.textMuted, marginLeft: 6 }}>
-							More
-						</span>
 					</div>
 				</div>
 			</div>
