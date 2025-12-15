@@ -46,8 +46,8 @@ export const env = createEnv({
     RENDER_CONCURRENCY: z.coerce.number().default(4),
     RENDER_TIMEOUT_MS: z.coerce.number().default(60000),
     // Render scale factor. Keep in sync with Remotion Studio via packages/remotion/remotion.config.ts.
-    // Default 1 for parity with Studio preview/renders unless explicitly overridden.
-    RENDER_SCALE: z.coerce.number().default(1),
+    // Default 2 for higher quality renders (2x resolution).
+    RENDER_SCALE: z.coerce.number().default(2),
 
     // Optional base URL for generating absolute URLs (e.g. https://api.example.com)
     // If unset, APIs will return relative URLs.
