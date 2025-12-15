@@ -226,7 +226,7 @@ export async function renderComposition(
     );
     onProgress?.({ stage: "convert", progress: 0 });
     const webpBuffer = await convertVideoToWebP(mp4Buffer, {
-      quality: 85,
+      quality: 65, // Lower quality (65) for better compression - WebP was too large
       fps: 30, // Use 30fps for web optimization (reduced from composition.fps)
     });
     onProgress?.({ stage: "convert", progress: 1 });

@@ -253,6 +253,7 @@ export function ReadmeCard({
 							gap: 12,
 							position: 'relative',
 							zIndex: 1,
+							paddingBottom: 24, // Extra space at bottom
 						}}
 					>
 						{stats.map((stat, i) => (
