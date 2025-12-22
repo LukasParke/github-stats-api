@@ -7,6 +7,9 @@ services:
   # Redis for job queue and caching
   app-redis:
     image: redis:7-alpine
+    labels:
+      glance.parent: github-stats
+      glance.name: Redis
     command: redis-server --appendonly yes --maxmemory-policy noeviction
     volumes:
       - redis-data:/data
@@ -23,6 +26,9 @@ services:
   # This service is internal-only; images are served publicly via the API.
   minio:
     image: minio/minio:latest
+    labels:
+      glance.parent: github-stats
+      glance.name: MinIO
     command: server /data --console-address ":9001"
     volumes:
       - minio-data:/data
@@ -53,6 +59,12 @@ services:
     build:
       context: .
       dockerfile: packages/server/Dockerfile
+    labels:
+      glance.id: github-stats
+      glance.name: GitHub Stats API
+      glance.icon: si:github
+      glance.description: Render GitHub stats cards via API + background worker
+      glance.url: ${PUBLIC_URL:-}
     ports:
       - "${PORT:-3029}:${PORT:-3029}"
     environment:
@@ -88,6 +100,9 @@ services:
     build:
       context: .
       dockerfile: packages/server/Dockerfile
+    labels:
+      glance.parent: github-stats
+      glance.name: Render Worker
     command: ["bun", "run", "packages/server/src/workers/render-worker.ts"]
     environment:
       - NODE_ENV=production
